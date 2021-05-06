@@ -9,7 +9,7 @@ use std::env;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile;
 
@@ -34,7 +34,7 @@ struct Opts {
     #[clap(name = "FILES")]
     files: Vec<String>,
     /// Optionally set a custom rename command, like 'git mv'
-    #[clap(short, long)]
+    #[clap(short = 'c', long)]
     rename_command: Option<String>,
     /// Prettify diffs
     #[clap(short, long)]
@@ -155,13 +155,17 @@ fn get_input(files: Vec<String>) -> anyhow::Result<Vec<String>> {
     return Ok(input.lines().map(|f| f.to_string()).collect());
 }
 
-fn get_input_files(files: Vec<String>) -> anyhow::Result<Vec<String>> {
-    let mut input_files = get_input(files)?;
+fn get_input_files(files: Vec<String>) -> anyhow::Result<Vec<PathBuf>> {
+    let inputs = get_input(files)?;
+    let input_files: Vec<PathBuf>;
     // This is a special case where we want to expand `.` and `..`.
     let dots = &[".", ".."];
-    if input_files.len() == 1 && dots.contains(&input_files[0].as_str()) {
-        input_files = expand_dir(&input_files[0])?;
+    if inputs.len() == 1 && dots.contains(&inputs[0].as_str()) {
+        input_files = expand_dir(&inputs[0])?;
+    } else {
+        input_files = inputs.iter().map(PathBuf::from).collect();
     }
+
     if input_files.is_empty() {
         return Err(anyhow!("No input files on stdin or as args. Aborting."));
     }
@@ -169,11 +173,11 @@ fn get_input_files(files: Vec<String>) -> anyhow::Result<Vec<String>> {
     Ok(input_files)
 }
 
-fn expand_dir(path: &str) -> anyhow::Result<Vec<String>, io::Error> {
+fn expand_dir(path: &str) -> anyhow::Result<Vec<PathBuf>> {
     Ok(fs::read_dir(path)?
         .filter_map(|e| {
             e.ok()
-                .and_then(|e| e.path().into_os_string().into_string().ok())
+                .and_then(|e| Some(e.path()))
         })
         .collect())
 }
@@ -278,11 +282,15 @@ fn prompt(yes: bool) -> anyhow::Result<&'static str> {
 fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
     let input_files = get_input_files(opts.files)?;
-    let mut buffer = input_files.clone();
+    let input_strings: Vec<_> = input_files.iter().map(|f| f.display().to_string()).collect();
+    let filenames: Vec<_> = input_files.iter().filter_map(|f| f.file_name()).collect();
+    println!("{:?}", input_files);
+    println!("{:?}", filenames);
+    let mut buffer = input_strings.clone();
 
     loop {
         let new_files = open_editor(&buffer)?;
-        let replacements = find_renames(&input_files, &new_files)?;
+        let replacements = find_renames(&input_strings, &new_files)?;
         println!();
 
         check_for_existing_files(&replacements)?;
@@ -298,7 +306,7 @@ fn main() -> anyhow::Result<()> {
                 break;
             }
             "Edit" => buffer = new_files.clone(),
-            "Reset" => buffer = input_files.clone(),
+            "Reset" => buffer = input_strings.clone(),
             _ => unreachable!(),
         }
     }
