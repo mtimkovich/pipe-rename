@@ -157,14 +157,13 @@ fn get_input(files: Vec<String>) -> anyhow::Result<Vec<String>> {
 
 fn get_input_files(files: Vec<String>) -> anyhow::Result<Vec<PathBuf>> {
     let inputs = get_input(files)?;
-    let input_files: Vec<PathBuf>;
     // This is a special case where we want to expand `.` and `..`.
     let dots = &[".", ".."];
-    if inputs.len() == 1 && dots.contains(&inputs[0].as_str()) {
-        input_files = expand_dir(&inputs[0])?;
+    let input_files: Vec<_> = if inputs.len() == 1 && dots.contains(&inputs[0].as_str()) {
+        expand_dir(&inputs[0])?
     } else {
-        input_files = inputs.iter().map(PathBuf::from).collect();
-    }
+        inputs.iter().map(PathBuf::from).collect()
+    };
 
     if input_files.is_empty() {
         return Err(anyhow!("No input files on stdin or as args. Aborting."));
