@@ -72,7 +72,7 @@ jobs:
         BIN_NAME="${{ needs.crate_metadata.outputs.name }}${EXE_suffix}"
         BIN_PATH="target/${{ matrix.job.target }}/release/${BIN_NAME}"
 
-        PKG_NAME=${{ needs.crate_metadata.outputs.name }}-${{ needs.crate_metadata.outputs.version }}-${{ matrix.job.target }}${{ EXE_suffix }}
+        PKG_NAME=${{ needs.crate_metadata.outputs.name }}-${{ needs.crate_metadata.outputs.version }}-${{ matrix.job.target }}${EXE_suffix}
 
         cp BIN_PATH PKG_NAME
 
