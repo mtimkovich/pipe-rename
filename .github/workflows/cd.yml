@@ -73,10 +73,9 @@ jobs:
         PKG_NAME=${{ needs.crate_metadata.outputs.name }}-${{ needs.crate_metadata.outputs.version }}-${{ matrix.job.target }}${EXE_suffix}
 
         cp "$BIN_PATH" "$PKG_NAME"
+        sha256sum "$PKG_NAME" > "${PKG_NAME}.sha256"
 
         # Let subsequent steps know where to find the binary
-        # echo "BIN_PATH=${BIN_PATH}" >> $GITHUB_OUTPUT
-        # echo "BIN_NAME=${BIN_NAME}" >> $GITHUB_OUTPUT
         echo "PKG_NAME=${PKG_NAME}" | tee -a $GITHUB_OUTPUT
 
     - name: Check for release
@@ -86,11 +85,12 @@ jobs:
         unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/[0-9\.]* ]]; then IS_RELEASE='true' ; fi
         echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
 
-    - name: Publish archives and packages
+    - name: Publish packages
       uses: softprops/action-gh-release@v1
       if: steps.is-release.outputs.IS_RELEASE
       with:
         files: |
           ${{ steps.bin.outputs.PKG_NAME }}
+          ${{ steps.bin.outputs.PKG_NAME }}.sha256
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
