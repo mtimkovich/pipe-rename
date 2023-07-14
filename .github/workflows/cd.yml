@@ -74,7 +74,7 @@ jobs:
 
         PKG_NAME=${{ needs.crate_metadata.outputs.name }}-${{ needs.crate_metadata.outputs.version }}-${{ matrix.job.target }}${EXE_suffix}
 
-        cp BIN_PATH PKG_NAME
+        cp "$BIN_PATH" "$PKG_NAME"
 
         # Let subsequent steps know where to find the binary
         # echo "BIN_PATH=${BIN_PATH}" >> $GITHUB_OUTPUT
