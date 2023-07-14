@@ -73,7 +73,12 @@ jobs:
         PKG_NAME=${{ needs.crate_metadata.outputs.name }}-${{ needs.crate_metadata.outputs.version }}-${{ matrix.job.target }}${EXE_suffix}
 
         cp "$BIN_PATH" "$PKG_NAME"
-        sha256sum "$PKG_NAME" > "${PKG_NAME}.sha256"
+
+        if [[ ${{ runner.os }} == 'Windows' ]]; then
+            certutil -hashfile "$PKG_NAME" sha256 | grep -E [A-Fa-f0-9]{64} > "${PKG_NAME}.sha256"
+          else
+            shasum -a 256 "$PKG_NAME" > "${PKG_NAME}.sha256"
+        fi
 
         # Let subsequent steps know where to find the binary
         echo "PKG_NAME=${PKG_NAME}" | tee -a $GITHUB_OUTPUT
