@@ -224,6 +224,14 @@ fn path_and_file_name(line: &String) -> Option<(PathBuf, String)> {
     }
 }
 
+fn shell_split(cmd: &str) -> anyhow::Result<Vec<String>> {
+    if cfg!(windows) {
+        return Ok(winsplit::split(cmd));
+    }
+
+    Ok(shell_words::split(cmd)?)
+}
+
 fn open_editor(
     input_files: &[String],
     editor_string: &str,
@@ -253,8 +261,10 @@ fn open_editor(
         write!(tmpfile, "{}", input_files.join("\n"))?;
     }
 
-    let editor_parsed = shell_words::split(editor_string)
-        .expect("failed to parse command line flags in EDITOR command");
+    let editor_string = format!("\"{}\"", editor_string);
+    let editor_parsed =
+        shell_split(&editor_string).expect("failed to parse command line flags in EDITOR command");
+    println!("{:?}", editor_parsed);
     tmpfile.seek(SeekFrom::Start(0))?;
     let child = Command::new(&editor_parsed[0])
         .args(&editor_parsed[1..])
@@ -263,7 +273,7 @@ fn open_editor(
         .with_context(|| {
             format!(
                 "Failed to execute editor command: '{}'",
-                shell_words::join(editor_parsed)
+                editor_parsed.join(" ")
             )
         })?;
 
@@ -355,8 +365,8 @@ fn execute_renames(
 ) -> anyhow::Result<()> {
     for replacement in replacements {
         if let Some(ref cmd) = rename_command {
-            let cmd_parsed = shell_words::split(cmd)
-                .expect("failed to parse command line flags in rename command");
+            let cmd_parsed =
+                shell_split(cmd).expect("failed to parse command line flags in rename command");
             subprocess::Exec::cmd(&cmd_parsed[0])
                 .args(&cmd_parsed[1..])
                 .arg(&replacement.original)
