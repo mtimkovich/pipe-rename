@@ -261,10 +261,8 @@ fn open_editor(
         write!(tmpfile, "{}", input_files.join("\n"))?;
     }
 
-    let editor_string = format!("\"{}\"", editor_string);
     let editor_parsed =
         shell_split(&editor_string).expect("failed to parse command line flags in EDITOR command");
-    println!("{:?}", editor_parsed);
     tmpfile.seek(SeekFrom::Start(0))?;
     let child = Command::new(&editor_parsed[0])
         .args(&editor_parsed[1..])
